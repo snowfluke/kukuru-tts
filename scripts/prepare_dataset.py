@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Kokoro German Training Dataset Pipeline
-========================================
-Processes cached Polly MP3s into a clean German TTS training dataset.
+Kokoro Indonesian Training Dataset Pipeline
+============================================
+Processes cached Polly MP3s into a clean Indonesian TTS training dataset.
 
 Usage:
     # Step 1: Transcribe all MP3s with mlx-whisper (resumable, run overnight)
@@ -52,7 +52,7 @@ MAX_DURATION_S = 30.0
 MIN_AVG_LOGPROB = -1.0  # Whisper confidence: closer to 0 is better
 MAX_NO_SPEECH_PROB = 0.5  # Reject segments that are likely silence/noise
 MIN_WORDS = 3  # Minimum words in transcription
-TARGET_LANGUAGE = "de"  # ISO 639-1 German
+TARGET_LANGUAGE = "id"  # ISO 639-1 Indonesian
 
 # ── Whisper model ─────────────────────────────────────────────────────────────
 
@@ -171,7 +171,7 @@ def _get_duration(path: Path) -> float:
 def _print_transcription_stats():
     if not TRANSCRIPTIONS_FILE.exists():
         return
-    total = done_de = done_en = done_other = 0
+    total = done_id = done_en = done_other = 0
     total_duration = 0.0
     with open(TRANSCRIPTIONS_FILE) as f:
         for line in f:
@@ -179,8 +179,8 @@ def _print_transcription_stats():
             total += 1
             total_duration += e.get("duration", 0)
             lang = e.get("language", "")
-            if lang == "de":
-                done_de += 1
+            if lang == "id":
+                done_id += 1
             elif lang == "en":
                 done_en += 1
             else:
@@ -188,9 +188,9 @@ def _print_transcription_stats():
     print(f"\nTranscription stats:")
     print(f"  Total files   : {total:,}")
     print(f"  Total duration: {total_duration / 3600:.1f}h")
-    print(f"  German (de)   : {done_de:,}  ({done_de / total * 100:.1f}%)")
-    print(f"  English (en)  : {done_en:,}  ({done_en / total * 100:.1f}%)")
-    print(f"  Other         : {done_other:,}")
+    print(f"  Indonesian (id): {done_id:,}  ({done_id / total * 100:.1f}%)")
+    print(f"  English (en)   : {done_en:,}  ({done_en / total * 100:.1f}%)")
+    print(f"  Other          : {done_other:,}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -293,7 +293,7 @@ def cmd_cluster():
         encoder = VoiceEncoder()
     except Exception as e:
         print(f"Failed to load resemblyzer: {e}")
-        print('Falling back to single-speaker labeling (all files -> "d_speaker0")')
+        print('Falling back to single-speaker labeling (all files -> "id_speaker0")')
         _write_speakers_single(entries)
         return
 
@@ -329,7 +329,7 @@ def cmd_cluster():
     # Build a lookup from file path to speaker label using the sample
     path_to_speaker: dict[str, str] = {}
     for entry, label in zip(valid_entries, labels):
-        speaker_id = f"d_speaker{label}"
+        speaker_id = f"id_speaker{label}"
         path_to_speaker[entry["path"]] = speaker_id
 
     # For entries NOT in the sample, find nearest speaker using centroid
@@ -353,14 +353,14 @@ def cmd_cluster():
             emb = emb / (np.linalg.norm(emb) + 1e-8)
             dists = np.dot(centroid_matrix, emb)
             best = int(np.argmax(dists))
-            path_to_speaker[entry["path"]] = f"d_speaker{best}"
+            path_to_speaker[entry["path"]] = f"id_speaker{best}"
         except Exception:
-            path_to_speaker[entry["path"]] = "d_speaker0"
+            path_to_speaker[entry["path"]] = "id_speaker0"
 
     # Write speakers.jsonl
     with open(SPEAKERS_FILE, "w") as f:
         for entry in entries:
-            entry["speaker"] = path_to_speaker.get(entry["path"], "d_speaker0")
+            entry["speaker"] = path_to_speaker.get(entry["path"], "id_speaker0")
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     # Print speaker distribution
@@ -376,9 +376,9 @@ def cmd_cluster():
 
     print(f"\nWrote {SPEAKERS_FILE}")
     print("\nNext: manually listen to a sample from each speaker to verify gender,")
-    print("then rename speakers to Kokoro convention: df_name (female), dm_name (male)")
+    print("then rename speakers to real voice names (e.g. id_speaker0=awal)")
     print(
-        "Edit speakers.jsonl or re-run with --rename-speakers dm_speaker0=dm_hans etc."
+        "Edit speakers.jsonl or re-run with --rename-speakers id_speaker0=awal etc."
     )
 
 
@@ -421,7 +421,7 @@ def _write_speakers_single(entries):
     """Fallback: label all entries as a single speaker."""
     with open(SPEAKERS_FILE, "w") as f:
         for entry in entries:
-            entry["speaker"] = "d_speaker0"
+            entry["speaker"] = "id_speaker0"
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     print(f"Wrote {SPEAKERS_FILE} (single speaker fallback)")
 
@@ -478,7 +478,7 @@ def cmd_format(rename_speakers: list[str] | None):
         for line in f:
             entries.append(json.loads(line))
 
-    # Apply any manual speaker renames (e.g. d_speaker0=df_anna)
+    # Apply any manual speaker renames (e.g. id_speaker0=awal)
     rename_map = {}
     if rename_speakers:
         for pair in rename_speakers:
@@ -536,16 +536,16 @@ def cmd_format(rename_speakers: list[str] | None):
     print(f"Converted: {converted}  Skipped (exists): {skipped}  Errors: {errors}")
 
     # Generate IPA phonemes
-    print("Generating IPA phonemes via misaki (espeak-ng German G2P)...")
+    print("Generating IPA phonemes via misaki (espeak-ng Indonesian G2P)...")
     from misaki import espeak
 
-    g2p = espeak.EspeakG2P(language="de")
+    g2p = espeak.EspeakG2P(language="id")
 
-    # Phoneme fixup: ʏ (U+028F, short ü) is not in Kokoro's 178-token vocab.
-    # Map it to y (U+0079, long ü) — the duration difference is learned from audio.
-    PHONEME_FIXUPS = {
-        "\u028f": "y",  # ʏ → y (near-close near-front rounded → close front rounded)
-    }
+    # Phoneme fixups: map any espeak output symbols missing from Kokoro's
+    # 178-token vocab. The standard Indonesian inventory is fully covered,
+    # so none are needed so far. If `prepare_training.py verify` reports
+    # unknown symbols, add mappings here.
+    PHONEME_FIXUPS = {}
 
     metadata_rows = []
     phoneme_rows = []
@@ -661,7 +661,7 @@ def cmd_stats():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Kokoro German TTS training dataset pipeline",
+        description="Kokoro Indonesian TTS training dataset pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -700,7 +700,7 @@ def main():
         "speakers",
         nargs="+",
         metavar="SPEAKER_ID",
-        help="Speaker IDs to drop (e.g. d_speaker0)",
+        help="Speaker IDs to drop (e.g. id_speaker0)",
     )
 
     # format
@@ -711,7 +711,7 @@ def main():
         "--rename-speakers",
         nargs="+",
         metavar="OLD=NEW",
-        help="Rename speaker IDs (e.g. d_speaker0=df_anna d_speaker1=dm_hans)",
+        help="Rename speaker IDs (e.g. id_speaker0=awal id_speaker1=dewi)",
     )
 
     # stats

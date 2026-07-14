@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Kokoro German: Extract Voicepack
-=================================
+Kokoro Indonesian: Extract Voicepack
+=====================================
 Extracts a voicepack (.pt) from a fine-tuned StyleTTS2 checkpoint by running
 both style encoders (acoustic + prosodic) on representative utterances and
 averaging the resulting style vectors.
@@ -9,23 +9,23 @@ averaging the resulting style vectors.
 Usage:
     # Single checkpoint (Stage 1 only — uses style_encoder for both halves)
     python scripts/extract_voicepack.py \
-        --model StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \
-        --audio-dir dataset/audio/dm_daniel \
-        --output voices/dm_daniel.pt
+        --model StyleTTS2/logs/kukuru-tts/epoch_1st_00002.pth \
+        --audio-dir dataset/audio/awal \
+        --output voices/awal.pt
 
     # Two checkpoints (recommended after Stage 2 training):
     #   style_encoder from Stage 1, predictor_encoder from Stage 2
     python scripts/extract_voicepack.py \
-        --model StyleTTS2/logs/kokoro_german/epoch_2nd_00001.pth \
-        --style-encoder-model StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \
-        --audio-dir dataset/audio/dm_daniel \
-        --output voices/dm_daniel.pt
+        --model StyleTTS2/logs/kukuru-tts/epoch_2nd_00001.pth \
+        --style-encoder-model StyleTTS2/logs/kukuru-tts/epoch_1st_00002.pth \
+        --audio-dir dataset/audio/awal \
+        --output voices/awal.pt
 
     # CPU (slower but works without GPU / while GPU is busy training)
     python scripts/extract_voicepack.py \
-        --model StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \
-        --audio-dir dataset/audio/dm_daniel \
-        --output voices/dm_daniel.pt \
+        --model StyleTTS2/logs/kukuru-tts/epoch_1st_00002.pth \
+        --audio-dir dataset/audio/awal \
+        --output voices/awal.pt \
         --device cpu
 
 Voicepack format: tensor of shape [510, 1, 256] (float32)
@@ -394,20 +394,20 @@ def main():
 Examples:
   # Stage 1 only (uses style_encoder for both halves)
   python scripts/extract_voicepack.py \\
-      --model StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \\
-      --audio-dir dataset/audio/dm_daniel \\
-      --output voices/dm_daniel.pt
+      --model StyleTTS2/logs/kukuru-tts/epoch_1st_00002.pth \\
+      --audio-dir dataset/audio/awal \\
+      --output voices/awal.pt
 
   # After Stage 2 (recommended: style_encoder from Stage 1, predictor_encoder from Stage 2)
   python scripts/extract_voicepack.py \\
-      --model StyleTTS2/logs/kokoro_german/epoch_2nd_00001.pth \\
-      --style-encoder-model StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \\
-      --audio-dir dataset/audio/dm_daniel \\
-      --output voices/dm_daniel.pt
+      --model StyleTTS2/logs/kukuru-tts/epoch_2nd_00001.pth \\
+      --style-encoder-model StyleTTS2/logs/kukuru-tts/epoch_1st_00002.pth \\
+      --audio-dir dataset/audio/awal \\
+      --output voices/awal.pt
 
   # CPU (while GPU is busy training)
   python scripts/extract_voicepack.py \\
-      --model StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \\
+      --model StyleTTS2/logs/kukuru-tts/epoch_1st_00002.pth \\
       --device cpu
 """,
     )

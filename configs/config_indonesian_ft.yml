@@ -8,16 +8,16 @@ first_stage_path: "first_stage.pth"
 load_only_params: true
 second_stage_load_pretrained: false  # false = load from first_stage.pth (recommended)
 # ─────────────────────────────────────────────────────────────────────────────
-# Kokoro German Fine-Tuning Config
+# Kokoro Indonesian Fine-Tuning Config
 # ─────────────────────────────────────────────────────────────────────────────
 # Based on StyleTTS2 config_ft.yml, adapted for:
 # - Kokoro-82M architecture (ISTFTNet vocoder, no diffusion)
-# - German single-speaker fine-tuning (28h Daniel)
+# - Indonesian single-speaker fine-tuning
 # - Conservative fine-tuning from pre-trained English checkpoint
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Logging ──────────────────────────────────────────────────────────────────
-log_dir: "logs/kokoro-deutsch"
+log_dir: "logs/kukuru-tts"
 
 # ── Data ─────────────────────────────────────────────────────────────────────
 data_params:
@@ -137,7 +137,7 @@ F0_path: "Utils/JDC/bst.t7"
 
 # ── ASR Alignment Model ─────────────────────────────────────────────────────
 # StyleTTS2's pre-trained alignment model (English)
-# May need to be adapted for German or set TMA_epoch=0 to learn from scratch
+# May need to be adapted for Indonesian or set TMA_epoch=0 to learn from scratch
 ASR_config: "Utils/ASR/config.yml"
 ASR_path: "Utils/ASR/epoch_00080.pth"
 

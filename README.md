@@ -1,12 +1,12 @@
-# kikiri-tts
+# kukuru-tts
 
-<img src="docs/images/kikiri-tts-logo.png" alt="kikiri-tts logo" width="150">
+<img src="docs/images/kikiri-tts-logo.png" alt="logo" width="150">
 
 > [!NOTE]
-> This repository was formerly named `kokoro-deutsch`. The Python package and the
-> published HuggingFace model still use the old `kokoro-deutsch` name.
+> This repository is a fork of [kikiri-tts](https://github.com/semidark/kikiri-tts)
+> (formerly `kokoro-deutsch`), retargeted from German to Indonesian.
 
-Training recipe for fine-tuning [Kokoro-82M](https://github.com/hexgrad/kokoro) for German with a patched [StyleTTS2](https://github.com/yl4579/StyleTTS2) submodule.
+Training recipe for fine-tuning [Kokoro-82M](https://github.com/hexgrad/kokoro) for Indonesian with a patched [StyleTTS2](https://github.com/yl4579/StyleTTS2) submodule.
 
 ## What This Is
 
@@ -22,7 +22,7 @@ Training recipe for fine-tuning [Kokoro-82M](https://github.com/hexgrad/kokoro) 
 
 ## Start Here
 
-### I want to train my own German voice
+### I want to train my own Indonesian voice
 
 Start with `docs/TRAINING_GUIDE.md`.
 
@@ -36,71 +36,48 @@ See `docs/ARCHITECTURE.md`.
 
 ## Status
 
-The end-to-end pipeline is working:
+The pipeline structure is inherited working from the German recipe:
 
 `Dataset preparation -> Weight conversion -> Stage 1 -> Stage 2 -> Voicepack extraction -> KModel inference`
 
+No Indonesian checkpoint has been trained or published yet — this fork is the
+training recipe for producing one. The German models the original recipe
+produced live at the [kikiri-tts](https://huggingface.co/kikiri-tts)
+HuggingFace organization.
+
 ## Published Models & Voices
 
-All checkpoints are compatible with the Kokoro-82M inference pipeline.
-
-### Base Model
-
-**dida-80b/kokoro-deutsch-hui-base** is a German multi-speaker Stage 1 base model
-trained on ~51 hours of audio. It is not a finished single-speaker voice —
-use it as a starting point for training your own with
-`docs/TRAINING_GUIDE.md`.
-
-| Specification | Value |
-|---|---|
-| Speakers | 51 (24M / 27F) |
-| Training Audio | ~51 hours (effective) |
-| Train Samples | 20,495 |
-| Val Samples | 418 |
-| Final Mel Loss | 0.3264 |
-| License | CC0-1.0 |
-| Model | [dida-80b/kokoro-deutsch-hui-base](https://huggingface.co/dida-80b/kokoro-deutsch-hui-base) |
-| Dataset | [dida-80b/hui-german-51speakers](https://huggingface.co/datasets/dida-80b/hui-german-51speakers) |
-
-### Fine-Tuned Voices
-
-Stage 2 single-speaker fine-tunings. Each ships with a speaker voicepack.
-Click the links to hear speech demos directly from HuggingFace.
-
-#### German (de)
-
-| Voice | Speaker | Samples | License | Demo |
-|-------|---------|---------|---------|------|
-| **[kikiri-german-martin](https://huggingface.co/kikiri-tts/kikiri-german-martin)** | Martin Harbecke (male) | 627 | Apache 2.0 | [Speech Demo](https://huggingface.co/kikiri-tts/kikiri-german-martin/blob/main/README.md#demo) |
-| **[kikiri-german-victoria](https://huggingface.co/kikiri-tts/kikiri-german-victoria)** | Victoria Asztaller (female) | 455 | Apache 2.0 | [Speech Demo](https://huggingface.co/kikiri-tts/kikiri-german-victoria#demo) |
-
-*More voices and languages coming soon. Check the [kikiri-tts](https://huggingface.co/kikiri-tts) HuggingFace organization for updates.*
+*None yet. Indonesian base model and voices will be listed here once trained.*
 
 ## Running Verification Tests
 
-To run a quick text-to-speech sanity check — e.g. after updating phonemizer
-packages like `misaki`, bumping dependencies, or making model changes — run the
-inference script with no arguments:
+To run a fast text-to-speech frontend sanity check — e.g. after updating
+phonemizer packages like `misaki`, bumping dependencies, or making model
+changes — run the G2P frontend checks (no model download required):
 
 ```bash
-uv run scripts/test_inference.py
+uv run scripts/test_inference.py --check-frontend
 ```
 
-On first run this downloads a reference model
-([`kikiri-tts/kikiri-german-martin`](https://huggingface.co/kikiri-tts/kikiri-german-martin))
-and voicepack into a local cache (`test_output/.model_cache/`), synthesizes the
-standard German phonetic test sentences, and writes the audio to `test_output/`.
-It runs on CPU automatically when no GPU is available, so it works on any machine
-and in CI/CD pipelines. Subsequent runs reuse the cached files.
+This phonemizes the standard Indonesian phonetic test sentences with
+espeak-ng and verifies core Indonesian phonemes (ɲ, ŋ, ə, ʧ, ʤ, x, ç, ʔ)
+appear in the output — fingerprinting the phonemizer's conventions so a
+silent G2P change fails loudly. See "Measured espeak-ng behavior" in
+`docs/ARCHITECTURE.md` for what espeak gets right and wrong for Indonesian.
 
-To test a specific checkpoint or voice instead, pass explicit paths:
+To run full inference against a trained checkpoint or voice, pass explicit
+paths (the zero-config download mode is disabled until the first Indonesian
+reference model is published):
 
 ```bash
 uv run scripts/test_inference.py \
-    --model voices/kokoro_german_epoch3.pth \
-    --voicepack voices/dm_daniel_epoch3.pt \
+    --model voices/kokoro_indonesian_epoch3.pth \
+    --voicepack voices/awal_epoch3.pt \
     --device cpu
 ```
+
+It runs on CPU automatically when no GPU is available, so it works on any
+machine and in CI/CD pipelines. Audio is written to `test_output/`.
 
 ## Repository Layout
 
@@ -117,7 +94,7 @@ training/            # Local training artifacts metadata (audio excluded)
 
 Contributions are welcome, especially:
 
-- Reproducible runs on public datasets
+- Reproducible runs on public Indonesian datasets
 - Fine-tuning recipes for other languages
 - Training stability and quality improvements
 

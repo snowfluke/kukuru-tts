@@ -1,6 +1,6 @@
 # Training Guide
 
-This guide is the practical path for fine-tuning Kokoro-82M for German.
+This guide is the practical path for fine-tuning Kokoro-82M for Indonesian.
 
 For deep debugging details, see `TROUBLESHOOTING.md`.
 For architecture and compatibility notes, see `ARCHITECTURE.md`.
@@ -37,8 +37,8 @@ This repo uses **git submodules** (`kokoro/` and `StyleTTS2/`). Clone with
 `--recurse-submodules` or those directories will be empty:
 
 ```bash
-git clone --recurse-submodules https://github.com/semidark/kikiri-tts
-cd kikiri-tts
+git clone --recurse-submodules https://github.com/snowfluke/kukuru-tts
+cd kukuru-tts
 uv sync
 ```
 
@@ -67,17 +67,20 @@ Create file lists in StyleTTS2 format:
 Requirements:
 - WAV, mono, 24kHz, 16-bit
 - Typical clip duration: 2–30s
-- Keep phoneme strings compatible with Kokoro symbols (see [Phoneme Compatibility](ARCHITECTURE.md#german-phoneme-compatibility))
+- Keep phoneme strings compatible with Kokoro symbols (see [Phoneme Compatibility](ARCHITECTURE.md#indonesian-phoneme-compatibility))
 
-German G2P example:
+Indonesian G2P example:
 
 ```python
 from misaki import espeak
 
-g2p = espeak.EspeakG2P(language='de')
+g2p = espeak.EspeakG2P(language='id')
 phonemes, _ = g2p(text)
-phonemes = phonemes.replace('ʏ', 'y')  # ʏ not in Kokoro vocab
 ```
+
+Before phonemizing a full dataset, read "Measured espeak-ng behavior" in
+`ARCHITECTURE.md` — espeak's e-pepet/e-taling handling is heuristic and its
+conventions (ç for sy, single-char ʧ/ʤ) are what your model will learn.
 
 Use:
 - `scripts/prepare_dataset.py`
@@ -121,9 +124,9 @@ Verify:
 from kokoro_symbols import symbols, dicts, TextCleaner
 assert len(symbols) == 178
 tc = TextCleaner()
-assert dicts['ç'] == 78   # ich-Laut
-assert dicts['ʦ'] == 20   # ts affricate
-assert dicts['ː'] == 158  # length mark
+assert dicts['ɲ'] == 114  # ny (as in "nyanyi")
+assert dicts['ŋ'] == 112  # ng (as in "bunga")
+assert dicts['ə'] == 83   # e pepet (as in "tenang")
 ```
 
 Without this, training appears to run but token embeddings are silently wrong.
@@ -148,7 +151,7 @@ python setup.py build_ext --inplace
 
 ## 6) Configure Training
 
-Primary config: `configs/config_german_ft.yml`
+Primary config: `configs/config_indonesian_ft.yml`
 
 ### Critical: Top-Level vs Nested Parameters
 
@@ -202,7 +205,7 @@ Any NaN in Mel Loss is a red flag — most likely a symbol mapping problem.
 Run from `StyleTTS2/`:
 
 ```bash
-accelerate launch train_first.py --config_path ../configs/config_german_ft.yml
+accelerate launch train_first.py --config_path ../configs/config_indonesian_ft.yml
 ```
 
 ### Loss interpretation
@@ -227,7 +230,7 @@ Checkpoints saved in `StyleTTS2/logs/<run>/`.
 Run from `StyleTTS2/`:
 
 ```bash
-accelerate launch train_second.py --config_path ../configs/config_german_ft.yml
+accelerate launch train_second.py --config_path ../configs/config_indonesian_ft.yml
 ```
 
 ### Loss interpretation
@@ -252,17 +255,17 @@ Extract:
 
 ```bash
 python scripts/extract_voicepack.py \
-  --model StyleTTS2/logs/kokoro-deutsch/epoch_2nd_00009.pth \
+  --model StyleTTS2/logs/kukuru-tts/epoch_2nd_00009.pth \
   --audio-dir path/to/audio \
-  --output voices/dm_daniel.pt
+  --output voices/awal.pt
 ```
 
 Convert/test inference:
 
 ```bash
 python scripts/test_inference.py \
-  --checkpoint StyleTTS2/logs/kokoro-deutsch/epoch_2nd_00009.pth \
-  --voicepack voices/dm_daniel.pt \
+  --checkpoint StyleTTS2/logs/kukuru-tts/epoch_2nd_00009.pth \
+  --voicepack voices/awal.pt \
   --output-dir test_output/
 ```
 

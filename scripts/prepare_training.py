@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Kokoro German: Prepare Training Data
-=====================================
+Kokoro Indonesian: Prepare Training Data
+=========================================
 Converts the dataset produced by prepare_dataset.py into the format
 expected by StyleTTS2's training scripts.
 
@@ -63,7 +63,7 @@ def cmd_prepare():
     if not METADATA_FILE.exists() or not PHONEMES_FILE.exists():
         print("ERROR: metadata.csv or phonemes.csv not found.")
         print(
-            "Run: uv run python scripts/prepare_dataset.py format --rename-speakers d_speaker1=dm_daniel"
+            "Run: uv run python scripts/prepare_dataset.py format --rename-speakers id_speaker1=awal"
         )
         sys.exit(1)
 
@@ -159,40 +159,39 @@ def cmd_prepare():
     print(f"Wrote {TRAIN_LIST} ({len(train_entries):,} lines)")
     print(f"Wrote {VAL_LIST} ({len(val_entries):,} lines)")
 
-    # ── Write OOD texts (German sentences not in training) ───────────────
+    # ── Write OOD texts (Indonesian sentences not in training) ───────────
     ood_sentences = [
-        "Die Bundesrepublik Deutschland ist ein demokratischer Staat.",
-        "Morgen wird es regnen, nehmen Sie einen Regenschirm mit.",
-        "Der schnelle braune Fuchs springt über den faulen Hund.",
-        "Können Sie mir bitte den Weg zum Bahnhof zeigen?",
-        "Die Kinder spielen fröhlich im Garten und lachen laut.",
-        "Wissenschaftler haben eine bahnbrechende Entdeckung gemacht.",
-        "Das Frühstück war ausgezeichnet, besonders die frischen Brötchen.",
-        "Im Schwarzwald gibt es viele schöne Wanderwege zu entdecken.",
-        "Die Universität bietet verschiedene Studiengänge für internationale Studenten an.",
-        "Bitte vergessen Sie nicht, die Tür abzuschließen, wenn Sie gehen.",
-        "Der Weihnachtsmarkt in Nürnberg ist weltberühmt für seinen Glühwein.",
-        "Diese Aufgabe erfordert besondere Sorgfalt und Aufmerksamkeit.",
-        "Die Zugverbindung zwischen München und Berlin dauert etwa vier Stunden.",
-        "Könnten Sie mir erklären, wie dieses Gerät funktioniert?",
-        "Das Unternehmen hat im vergangenen Quartal einen Rekordgewinn erzielt.",
-        "Die Bibliothek hat montags bis freitags von acht bis zwanzig Uhr geöffnet.",
-        "Entschuldigen Sie die Verspätung, der Verkehr war heute besonders schlimm.",
-        "Die neue Brücke über den Rhein wird nächstes Jahr fertiggestellt.",
-        "Haben Sie schon einmal die Berliner Philharmoniker live gehört?",
-        "Der Arzt empfiehlt, täglich mindestens dreißig Minuten spazieren zu gehen.",
+        "Republik Indonesia adalah negara kepulauan terbesar di dunia.",
+        "Besok akan turun hujan, jangan lupa membawa payung.",
+        "Rubah cokelat yang gesit melompati anjing yang malas.",
+        "Bisakah Anda menunjukkan jalan menuju stasiun kereta api?",
+        "Anak-anak bermain dengan gembira di halaman sambil tertawa.",
+        "Para ilmuwan telah membuat penemuan yang mengubah dunia.",
+        "Sarapan pagi ini sangat lezat, terutama nasi gorengnya.",
+        "Di pegunungan Jawa Barat terdapat banyak jalur pendakian yang indah.",
+        "Universitas itu menawarkan berbagai program studi bagi mahasiswa internasional.",
+        "Tolong jangan lupa mengunci pintu ketika Anda pergi.",
+        "Pasar malam di Yogyakarta terkenal dengan makanan tradisionalnya.",
+        "Tugas ini membutuhkan ketelitian dan perhatian khusus.",
+        "Perjalanan kereta antara Jakarta dan Surabaya memakan waktu sekitar delapan jam.",
+        "Bisakah Anda menjelaskan cara kerja alat ini?",
+        "Perusahaan itu mencatat keuntungan rekor pada kuartal lalu.",
+        "Perpustakaan buka dari hari Senin sampai Jumat, pukul delapan pagi hingga delapan malam.",
+        "Maaf saya terlambat, lalu lintas hari ini sangat padat.",
+        "Jembatan baru di atas Sungai Musi akan selesai tahun depan.",
+        "Apakah Anda pernah menonton pertunjukan gamelan secara langsung?",
+        "Dokter menganjurkan berjalan kaki setidaknya tiga puluh menit setiap hari.",
     ]
 
     # Convert OOD texts to IPA phonemes
     try:
         from misaki import espeak
 
-        g2p = espeak.EspeakG2P(language="de")
+        g2p = espeak.EspeakG2P(language="id")
         ood_phonemes = []
         for text in ood_sentences:
             try:
                 ph, _ = g2p(text)
-                ph = ph.replace("\u028f", "y")  # ʏ → y fixup
                 ood_phonemes.append(ph)
             except Exception:
                 pass
@@ -209,7 +208,7 @@ def cmd_prepare():
     print(f"Training data ready in {TRAINING_DIR}/")
     print(f"  train_list.txt  : {len(train_entries):,} entries")
     print(f"  val_list.txt    : {len(val_entries):,} entries")
-    print(f"  OOD_texts.txt   : out-of-domain German sentences")
+    print(f"  OOD_texts.txt   : out-of-domain Indonesian sentences")
     print(f"  Audio dir       : {WAVS_DIR}/")
     print(f"{'=' * 60}")
 
@@ -391,8 +390,8 @@ def cmd_patch_styletts2():
 
     This is CRITICAL: Kokoro and StyleTTS2 use the same 178 tokens but with
     different index assignments. If we don't fix this, the pre-trained
-    embeddings will be scrambled (e.g., the model would think the German
-    affricate ʦ is the letter D).
+    embeddings will be scrambled (e.g., the model would think the Indonesian
+    palatal nasal ɲ is a completely different symbol).
 
     This command generates a drop-in replacement for StyleTTS2's symbol
     mapping that matches Kokoro-82M's config.json exactly.

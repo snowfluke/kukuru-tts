@@ -1,10 +1,10 @@
-# AGENTS.md — kikiri-tts
+# AGENTS.md — kukuru-tts
 
 ## Project Overview
 
-kikiri-tts (formerly `kokoro-deutsch`; the Python package and published HuggingFace model retain the old name) is a training recipe for fine-tuning [Kokoro TTS](https://github.com/hexgrad/kokoro) (82M parameters, based on StyleTTS 2) for German. The project contains:
+kukuru-tts (a fork of `kikiri-tts`, retargeted from German to Indonesian) is a training recipe for fine-tuning [Kokoro TTS](https://github.com/hexgrad/kokoro) (82M parameters, based on StyleTTS 2) for Indonesian. The project contains:
 
-- A forked `kokoro/` inference package as a git submodule (`semidark/kokoro`, branch `main`), with German language code support
+- A forked `kokoro/` inference package as a git submodule (`semidark/kokoro`, branch `main`), with custom language code support
 - A patched fork of `StyleTTS2/` as a git submodule (`semidark/StyleTTS2`, branch `main`)
 - Original scripts for dataset preparation, voicepack extraction, and inference testing
 - Training and troubleshooting docs split by purpose
@@ -13,14 +13,14 @@ kikiri-tts (formerly `kokoro-deutsch`; the Python package and published HuggingF
 - **Package manager:** `uv` (lockfile: `uv.lock`)
 - **Build backend:** hatchling
 - **License:** Apache 2.0
-- **Repository:** `https://github.com/semidark/kikiri-tts`
+- **Repository:** `https://github.com/snowfluke/kukuru-tts`
 
 ## Build & Install
 
 ```bash
 # Clone with submodules (required: kokoro/ and StyleTTS2/ are git submodules)
-git clone --recurse-submodules https://github.com/semidark/kikiri-tts
-cd kikiri-tts
+git clone --recurse-submodules https://github.com/snowfluke/kukuru-tts
+cd kukuru-tts
 # If already cloned without submodules: git submodule update --init --recursive
 
 # Install Python dependencies (use uv, not pip directly)
@@ -29,7 +29,7 @@ uv sync
 # Install the package in editable mode
 uv pip install -e .
 
-# System dependency required for German G2P
+# System dependency required for Indonesian G2P
 # macOS: brew install espeak-ng
 # Linux: apt-get install espeak-ng
 ```
@@ -47,10 +47,10 @@ To validate training/inference changes, use:
 
 ```bash
 # Generate speech from text
-uv run kokoro --text "Hallo Welt" -o output.wav -l d --voice dm_daniel
+uv run kokoro --text "Halo dunia" -o output.wav -l id --voice voices/awal.pt
 
 # From file
-uv run kokoro -i input.txt -o output.wav -l d --voice dm_daniel
+uv run kokoro -i input.txt -o output.wav -l id --voice voices/awal.pt
 ```
 
 ## Code Style Guidelines
@@ -139,7 +139,7 @@ scripts/             # Original: dataset prep, voicepack extraction, inference t
   extract_voicepack.py # Extract .pt voicepack from trained checkpoint
   test_inference.py  # Convert checkpoint to KModel format + run test sentences
 configs/             # Training configuration
-  config_german_ft.yml # StyleTTS2 config for German fine-tuning
+  config_indonesian_ft.yml # StyleTTS2 config for Indonesian fine-tuning
 training/            # Training data lists, OOD texts, config (large files excluded)
 docs/                # Documentation
   TRAINING_GUIDE.md  # Step-by-step training flow
@@ -156,7 +156,8 @@ upstream `hexgrad/kokoro` repository.
 
 - **Sample rate:** 24000 Hz
 - **Max phoneme length:** 510 characters (inputs are chunked/truncated to fit)
-- **German G2P:** Uses `espeak.EspeakG2P(language='de')` from misaki, requires espeak-ng installed
+- **Indonesian G2P:** Uses `espeak.EspeakG2P(language='id')` from misaki, requires espeak-ng. All emitted symbols are covered by Kokoro's vocab, but espeak's e-pepet/e-taling handling is heuristic and often wrong — see "Measured espeak-ng behavior" in `docs/ARCHITECTURE.md`
+- **Indonesian lang code:** `'id'` in the kokoro fork's pipeline/CLI. The pinned submodule commit still ships the German `'d'` code; add `id='id'` to `LANG_CODES` in `kokoro/kokoro/pipeline.py` (one line — the generic espeak branch handles the rest, and the `assert lang_code in LANG_CODES` check accepts two-letter keys) to enable Indonesian inference. Voice names without an `id` prefix (e.g. `awal`) only trigger a cosmetic warning; passing a `.pt` path avoids it
 - **Voice files:** `.pt` files; shape `[510, 1, 256]` per voice (float32)
 - **Device selection:** Auto-detects CUDA > MPS > CPU; explicit device can be passed
 - **ONNX export:** Use `disable_complex=True` in `KModel` to use `CustomSTFT` instead of `TorchSTFT`

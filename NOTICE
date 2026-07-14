@@ -1,5 +1,8 @@
-kikiri-tts
-Copyright 2026 semidark
+kukuru-tts
+Copyright 2026 snowfluke
+
+kukuru-tts is a fork of kikiri-tts (https://github.com/semidark/kikiri-tts),
+Copyright 2026 semidark, retargeted from German to Indonesian.
 
 This project contains code from the following open-source projects:
 
@@ -10,7 +13,8 @@ kokoro/ — Kokoro TTS inference package (git submodule)
   Fork:    https://github.com/semidark/kokoro (branch: main)
   License: Apache License 2.0
   Author:  hexgrad
-  Changes: Fork includes German language support (`'d'`) in pipeline/CLI.
+  Changes: Fork adds extra language codes to pipeline/CLI (German `'d'`;
+           Indonesian `'id'` is added by this project).
 
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -32,6 +36,6 @@ StyleTTS2/ — Training code (git submodule)
 The following directories contain original work by this project's contributors:
 
   scripts/     — Dataset preparation, voicepack extraction, inference testing
-  configs/     — Training configuration for German fine-tuning
+  configs/     — Training configuration for Indonesian fine-tuning
   docs/        — Training guide and documentation
   training/    — Training data lists and OOD texts (audio files excluded)

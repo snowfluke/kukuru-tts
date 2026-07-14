@@ -46,39 +46,86 @@ Implication:
 Requirement:
 - `StyleTTS2/text_utils.py` must use Kokoro mapping (`kokoro_symbols.py`)
 
-## German G2P Notes
+## Indonesian G2P Notes
 
 - G2P backend: `misaki` + `espeak-ng`
-- German code path uses `espeak.EspeakG2P(language='de')`
-- Symbol `ʏ` is not in Kokoro vocab and must be normalized to `y`
+- Indonesian code path uses `espeak.EspeakG2P(language='id')`
+- Inference side: the kokoro fork must add `id='id'` to `LANG_CODES`
+  (`kokoro/kokoro/pipeline.py`) — one line; the generic espeak branch handles
+  the rest. Training and inference must use the same G2P.
 
-## German Phoneme Compatibility
+## Indonesian Phoneme Compatibility
 
-All standard German phonemes are covered by Kokoro's 178-token set:
+The symbol set below is what `EspeakG2P(language='id')` actually emits
+(measured with espeak-ng 1.52 via `espeakng-loader`, misaki 0.9.4), with IDs
+verified against `hexgrad/Kokoro-82M` `config.json`. Every emitted symbol is
+in Kokoro's 178-token vocab.
 
-| Sound | IPA | Unicode | Kokoro ID |
-|-------|-----|---------|-----------|
-| ich-Laut | `ç` | U+00E7 | 78 |
-| ach-Laut | `x` | U+0078 | 66 |
-| ö long | `ø` | U+00F8 | 116 |
-| ö short | `œ` | U+0153 | 120 |
-| ü long | `y` | U+0079 | 67 |
-| ts affricate | `ʦ` | U+02A6 | 20 |
-| schwa-r | `ɐ` | U+0250 | 70 |
-| sch | `ʃ` | U+0283 | 131 |
+| Sound | Emitted IPA | Unicode | Kokoro ID |
+|-------|-------------|---------|-----------|
+| ny | `ɲ` | U+0272 | 114 |
 | ng | `ŋ` | U+014B | 112 |
-| vowel length | `ː` | U+02D0 | 158 |
-| schwa | `ə` | U+0259 | 83 |
-| uvular r | `ʁ` | U+0281 | 128 |
-| glottal stop | `ʔ` | U+0294 | 148 |
+| c affricate | `ʧ` (single char) | U+02A7 | 133 |
+| j affricate | `ʤ` (single char) | U+02A4 | 82 |
+| sy | `ç` (espeak quirk, not `ʃ`) | U+00E7 | 78 |
+| kh | `x` | U+0078 | 66 |
+| e pepet (schwa) | `ə` | U+0259 | 83 |
+| e taling | `ɛ` (espeak prefers open-mid) | U+025B | 86 |
+| o | `o` / `ɔ` | U+006F / U+0254 | 57 / 76 |
+| r | `r` (plain, not normalized to `ɾ`) | U+0072 | 60 |
+| glottal stop (final k) | `ʔ` (inconsistent, see below) | U+0294 | 148 |
+| ai diphthong | `I` (misaki notation for aɪ) | U+0049 | 25 |
+| au diphthong | `W` (misaki notation for aʊ) | U+0057 | 39 |
+| w | `w` | U+0077 | 65 |
+| y (approximant) | `j` | U+006A | 52 |
+| stress | `ˈ` / `ˌ` | U+02C8 / U+02CC | 156 / 157 |
 
-### Missing symbol
+### Missing symbols
 
-| IPA | Unicode | Meaning | Fix |
-|-----|---------|---------|-----|
-| `ʏ` | U+028F | short ü | Map to `y` (U+0079) |
+None — verified empirically by phonemizing the full test-sentence set plus a
+loanword corpus (f/v/z/sy/kh words, numbers, dates) and diffing the emitted
+character set against the vocab. `PHONEME_FIXUPS` in
+`scripts/prepare_dataset.py` therefore stays empty; if a future
+espeak-ng/misaki bump emits something new, `scripts/prepare_training.py
+verify` reports unknown symbols and `scripts/test_inference.py
+--check-frontend` fingerprints the conventions.
 
-`ʏ` is produced by `espeak-ng` for short ü (e.g., in "Bücher"). It is not in Kokoro's vocabulary. Replace it with `y` (long ü) in post-processing. The model learns the duration difference from the audio context.
+## Measured espeak-ng behavior (production notes)
+
+espeak-ng's Indonesian rules are usable but heuristic where the language is
+lexical. Measured on a ground-truth word list (KBBI pronunciations):
+
+- **e pepet vs e taling is the main quality risk.** espeak applies a
+  positional rule — stressed `e` → `ɛ`, unstressed/final `e` → `ə` — but the
+  real distinction is lexical. Measured: only 5/20 common pepet words correct
+  (`teman`→`tˈɛman`, `enam`→`ˈɛnam`, `empat`→`ˈɛmpat`, `besar`→`bˈɛsar` are
+  all wrong), 12/16 taling words correct (word-final taling collapses to
+  schwa: `sate`→`sˈatə`, `kue`→`kˈuə`). Consequence: the `ɛ` and `ə` tokens
+  each cover a mix of true [ɛ] and [ə] audio, which muddies vowel quality for
+  exactly these high-frequency words. No open espeak-ng issue tracks this, so
+  don't expect an upstream fix.
+- **Glottal stop is inconsistent:** `bebek`→`bˈɛbɛʔ` but `tidak`→`tˈidak`,
+  `kakak`→`kˈakak`. Tolerable as long as it is the *same* G2P at training and
+  inference — the model learns espeak's convention, not the dictionary's.
+- **Numbers and dates are read correctly in Indonesian**
+  (`123`→`sərˈatus dˈuapˌuluhtˈiɡa`).
+- **Stress marks are emitted** and are in Kokoro's vocab; do not strip them.
+
+### Alternative G2P (quality upgrade path)
+
+[Wikidepia/g2p-id](https://github.com/Wikidepia/g2p-id) (MIT, maintained)
+fixes exactly the two weak spots above lexically: a `schwa_dict.csv` lexicon
++ CRF syllabifier for the e distinction, and a rule for final-k glottal
+stops. Adopting it is a project, not a swap: its output must be mapped to
+Kokoro vocab symbols (it emits no stress marks, keeps some orthographic
+symbols) and the *same* G2P must be implemented at inference time in the
+kokoro fork — the German ancestor of this repo solved the analogous problem
+with a misaki fork carrying pronunciation overrides. Never mix G2Ps between
+dataset prep and runtime. A lighter middle path: keep espeak and patch only
+the mislabeled `e` words using g2p-id's `schwa_dict.csv` as an override
+lexicon, applied identically in `prepare_dataset.py` and the fork's G2P.
+[kirralabs/indonesian-fonem](https://github.com/kirralabs/indonesian-fonem)
+is a useful reference table of the Indonesian phoneme inventory.
 
 ### Diacritics (stress markers)
 

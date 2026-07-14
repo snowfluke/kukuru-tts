@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Kokoro German: Test Inference
-==============================
-Tests the fine-tuned Kokoro model with a German phonetic test set.
+Kokoro Indonesian: Test Inference
+==================================
+Tests the fine-tuned Kokoro model with an Indonesian phonetic test set.
 
 Usage:
     # Zero-config sanity check (downloads reference model + voicepack from HF)
@@ -10,19 +10,19 @@ Usage:
 
     # Convert checkpoint + run inference
     python scripts/test_inference.py \
-        --checkpoint StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \
-        --voicepack voices/dm_daniel_epoch3.pt \
+        --checkpoint StyleTTS2/logs/kukuru-tts/epoch_1st_00002.pth \
+        --voicepack voices/awal_epoch3.pt \
         --output-dir test_output/epoch3
 
     # Use a previously converted model
     python scripts/test_inference.py \
-        --model voices/kokoro_german_epoch3.pth \
-        --voicepack voices/dm_daniel_epoch3.pt
+        --model voices/kokoro_indonesian_epoch3.pth \
+        --voicepack voices/awal_epoch3.pt
 
     # Run on CPU
     python scripts/test_inference.py \
-        --checkpoint StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \
-        --voicepack voices/dm_daniel_epoch3.pt \
+        --checkpoint StyleTTS2/logs/kukuru-tts/epoch_1st_00002.pth \
+        --voicepack voices/awal_epoch3.pt \
         --device cpu
 """
 
@@ -40,9 +40,12 @@ if _kokoro_submodule.exists() and str(_kokoro_submodule) not in sys.path:
 # When neither --checkpoint/--model nor --voicepack is provided, the script
 # lazily downloads these from HuggingFace into a local cache directory so a
 # fresh clone can run `uv run scripts/test_inference.py` with no arguments.
-DEFAULT_REPO_ID = "kikiri-tts/kikiri-german-martin"
-DEFAULT_MODEL_FILENAME = "kikiri_german_martin_ep10.pth"
-DEFAULT_VOICE_FILENAME = "voices/martin.pt"
+# TODO: No Indonesian reference model is published yet — update these once
+# the first fine-tuned Indonesian checkpoint lands on HuggingFace. Until
+# then, pass --model/--checkpoint and --voicepack explicitly.
+DEFAULT_REPO_ID = "snowfluke/kukuru-indonesian-reference"
+DEFAULT_MODEL_FILENAME = "kukuru_indonesian.pth"
+DEFAULT_VOICE_FILENAME = "voices/awal.pt"
 MODEL_CACHE_DIR = "test_output/.model_cache"
 
 
@@ -67,34 +70,32 @@ def download_reference_file(filename: str, cache_dir: str = MODEL_CACHE_DIR) -> 
         )
     return str(resolved)
 
-# Standard German phonetic test set — covers all major pronunciation challenges
+# Standard Indonesian phonetic test set — covers all major pronunciation challenges
 TEST_SENTENCES = [
-    # 1. Umlauts (ä, ö, ü) and sch
-    "Schön, dass du da bist. Die Bücher liegen auf dem großen Tisch.",
-    # 2. Ich-Laut vs Ach-Laut (ç vs x)
-    "Ich mache mich auf den Weg nach Aachen, um auch nachts wach zu sein.",
-    # 3. Eszett (ß) and vowel length
-    "Er aß die Maße in der Straße, aber das Maß war voll.",
-    # 4. Zischlaute (z, ts) and consonant clusters
-    "Zwei weiße Zwerge zwängen sich zwischen zwei Zweige.",
-    # 5. Pf-Laute
-    "Ein Pfau pflegt seine Federn an der Pfütze.",
-    # 6. Prosody: questions and exclamations
-    "Warum hast du das getan? Das ist ja unglaublich!",
-    # 7. Numbers
-    "Das kostet genau einhundertdreiundzwanzig Millionen Euro.",
+    # 1. ny (ɲ) and ng (ŋ)
+    "Nyonya itu menyanyi dengan nyaring sambil menggenggam bunga.",
+    # 2. c (tʃ) and j (dʒ) affricates
+    "Cuaca cerah, jadi Joko jajan cendol di Cirebon.",
+    # 3. Glottal stop (final k) and open vowel endings
+    "Kakak dan bapak tidak masak enak malam ini.",
+    # 4. e taling vs e pepet (e vs ə)
+    "Enam ekor bebek berenang ke tepi telaga yang tenang.",
+    # 5. Trilled/tapped r
+    "Burung merpati terbang berputar-putar di udara segar.",
+    # 6. sy (ʃ) and kh (x)
+    "Masyarakat bersyukur setelah musyawarah akhir pekan.",
+    # 7. Prosody: questions and exclamations
+    "Mengapa kamu melakukan itu? Sungguh luar biasa!",
+    # 8. Numbers
+    "Harganya tepat seratus dua puluh tiga juta rupiah.",
 ]
 
-# Pronunciation override test set — covers brand and technical term overrides
-OVERRIDE_TEST_CASES = [
-    ("Ich nutze GitHub und PyTorch.", ["github", "pytorch"]),
-    ("Lade die API oder ein JSON herunter.", ["api", "json"]),
-    ("Aktiviere CUDA auf deiner GPU.", ["cuda", "gpu"]),
-    ("Nutze Claude oder HuggingFace.", ["claude", "huggingface"]),
-    ("Füge einen Bindestrich in Disney+ oder espeak-ng ein.", ["disneyplus", "espeak-ng"]),
-    ("Die Symbiose und Synthese sind biologische Begriffe.", ["symbiose", "synthese"]),
-    ("Erstelle ein Zero-Shot Modell für maschinelles Lernen.", ["zero-shot"]),
-]
+# Phonemes that must appear somewhere in the test set output. Beyond core
+# Indonesian coverage (ɲ, ŋ, ə), this fingerprints espeak-ng's conventions —
+# ʧ/ʤ single-char affricates, ç for 'sy', ʔ from 'bebek' — so a phonemizer
+# update that silently changes conventions (and would poison a dataset or
+# break train/inference consistency) fails the check instead.
+EXPECTED_PHONEMES = ["ɲ", "ŋ", "ə", "ʧ", "ʤ", "x", "ç", "ʔ"]
 
 
 def convert_checkpoint(checkpoint_path: str, output_path: str) -> str:
@@ -139,51 +140,45 @@ def convert_checkpoint(checkpoint_path: str, output_path: str) -> str:
 
 
 def check_frontend():
-    """Verify that German G2P overrides are loaded and correctly matched by the frontend pipeline.
+    """Verify that Indonesian espeak G2P produces sane phonemes for the test set.
 
     This operates entirely on phonemes and requires no model or voicepack.
     """
     try:
-        from misaki.de import DEG2P, override_for
+        from misaki import espeak
     except ImportError:
-        print("ERROR: Could not import 'misaki.de'. Ensure misaki[de] is installed.")
+        print("ERROR: Could not import 'misaki.espeak'. Ensure misaki[en] and espeak-ng are installed.")
         sys.exit(1)
 
-    print("\n=== Running Frontend G2P Override Checks ===")
-    g2p = DEG2P()
+    print("\n=== Running Frontend G2P Checks ===")
+    g2p = espeak.EspeakG2P(language="id")
     failures = 0
+    all_phonemes = []
 
-    for i, (sentence, keys) in enumerate(OVERRIDE_TEST_CASES):
-        # DEG2P returns (phonemes, tokens)
+    for i, sentence in enumerate(TEST_SENTENCES):
+        # EspeakG2P returns (phonemes, tokens)
         phonemes, _ = g2p(sentence)
-        print(f"[{i + 1}/{len(OVERRIDE_TEST_CASES)}] Text: '{sentence}'")
+        all_phonemes.append(phonemes)
+        print(f"[{i + 1}/{len(TEST_SENTENCES)}] Text: '{sentence}'")
         print(f"      Phonemes: '{phonemes}'")
+        if not phonemes.strip():
+            print("  ❌ FAIL: G2P returned empty phonemes.")
+            failures += 1
 
-        case_failed = False
-        for key in keys:
-            expected_ipa = override_for(key)
-            if not expected_ipa:
-                print(f"  ❌ FAIL: Key '{key}' has no defined override in misaki.")
-                case_failed = True
-                continue
-
-            clean_phonemes = phonemes.replace(" ", "")
-            clean_expected = expected_ipa.replace(" ", "")
-            if clean_expected not in clean_phonemes:
-                print(f"  ❌ FAIL: Expected override '{key}' ('{expected_ipa}') not found in phonemes.")
-                case_failed = True
-            else:
-                print(f"  ✅ PASS: Found '{key}' ('{expected_ipa}')")
-
-        if case_failed:
+    combined = "".join(all_phonemes)
+    for ipa in EXPECTED_PHONEMES:
+        if ipa in combined:
+            print(f"  ✅ PASS: phoneme '{ipa}' present in test set output")
+        else:
+            print(f"  ❌ FAIL: expected Indonesian phoneme '{ipa}' not found in test set output.")
             failures += 1
 
     print("=" * 44)
     if failures == 0:
-        print("🎉 ALL FRONTEND OVERRIDE CHECKS PASSED!\n")
+        print("🎉 ALL FRONTEND G2P CHECKS PASSED!\n")
         sys.exit(0)
     else:
-        print(f"❌ {failures} FRONTEND OVERRIDE CHECKS FAILED.\n")
+        print(f"❌ {failures} FRONTEND G2P CHECKS FAILED.\n")
         sys.exit(1)
 
 
@@ -194,7 +189,7 @@ def run_inference(
     output_dir: str,
     device: str = "auto",
 ):
-    """Run inference on the German test set."""
+    """Run inference on the Indonesian test set."""
     import torch
     import soundfile as sf
     from kokoro import KModel, KPipeline
@@ -209,8 +204,9 @@ def run_inference(
     kmodel = KModel(repo_id="hexgrad/Kokoro-82M", config=config_path, model=model_path)
     kmodel = kmodel.to(device).eval()
 
-    # Create pipeline with German lang_code
-    pipeline = KPipeline(lang_code="d", repo_id="hexgrad/Kokoro-82M", model=kmodel)
+    # Create pipeline with the Indonesian lang_code. Requires the kokoro
+    # submodule fork to have id='id' in LANG_CODES (see docs).
+    pipeline = KPipeline(lang_code="id", repo_id="hexgrad/Kokoro-82M", model=kmodel)
 
     # Load voicepack
     print(f"Loading voicepack: {voicepack_path}")
@@ -244,35 +240,12 @@ def run_inference(
         except Exception as e:
             print(f"  ERROR: {e}")
 
-    print(f"\nGenerating {len(OVERRIDE_TEST_CASES)} override test sentences...\n")
-    for i, (text, _) in enumerate(OVERRIDE_TEST_CASES):
-        print(f"[{i + 1}/{len(OVERRIDE_TEST_CASES)}] {text[:60]}...")
-        try:
-            generator = pipeline(text, voice=voice, speed=1)
-            all_audio = []
-            for gs, ps, audio in generator:
-                print(f"  phonemes: {ps[:60]}...")
-                all_audio.append(audio)
-
-            if all_audio:
-                import numpy as np
-
-                combined = np.concatenate(all_audio)
-                wav_path = out / f"override_{i + 1:02d}.wav"
-                sf.write(str(wav_path), combined, 24000)
-                duration = len(combined) / 24000
-                print(f"  saved: {wav_path} ({duration:.1f}s)")
-            else:
-                print(f"  WARNING: No audio generated")
-        except Exception as e:
-            print(f"  ERROR: {e}")
-
     print(f"\nDone! Test audio saved to: {output_dir}/")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Test fine-tuned Kokoro German model",
+        description="Test fine-tuned Kokoro Indonesian model",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     group = parser.add_mutually_exclusive_group(required=False)
@@ -311,7 +284,7 @@ def main():
     parser.add_argument(
         "--check-frontend",
         action="store_true",
-        help="Only run fast G2P frontend override verification checks, without generating audio",
+        help="Only run fast G2P frontend verification checks, without generating audio",
     )
 
     args = parser.parse_args()
@@ -325,7 +298,7 @@ def main():
     if args.checkpoint:
         model_path = convert_checkpoint(
             args.checkpoint,
-            str(Path(args.output_dir) / "kokoro_german_converted.pth"),
+            str(Path(args.output_dir) / "kokoro_indonesian_converted.pth"),
         )
     elif args.model:
         model_path = args.model

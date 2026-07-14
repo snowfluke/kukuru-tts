@@ -1,6 +1,6 @@
 # Troubleshooting
 
-This document collects the critical training failures found during German Kokoro fine-tuning and how they were fixed.
+This document collects the critical training failures found during Kokoro fine-tuning (originally on the German recipe this fork descends from) and how they were fixed.
 
 If you are looking for the step-by-step path, use `TRAINING_GUIDE.md`.
 
@@ -8,7 +8,7 @@ If you are looking for the step-by-step path, use `TRAINING_GUIDE.md`.
 
 ### espeak data error: `Error processing file '.../phontab': No such file or directory`
 
-If German G2P fails on import or first synthesis with an error pointing at a
+If espeak G2P fails on import or first synthesis with an error pointing at a
 `/home/runner/work/.../espeak-ng-data/phontab` path, the bundled
 `espeakng-loader` wheel is at fault: its prebuilt `libespeak-ng.so` has a
 CI build path compiled in and ignores the data path it is handed (see

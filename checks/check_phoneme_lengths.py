@@ -12,7 +12,7 @@ from text_utils import TextCleaner
 
 
 LIMIT = 510
-_CONFIG_PATH = _PROJECT_ROOT / "configs" / "config_german_ft.yml"
+_CONFIG_PATH = _PROJECT_ROOT / "configs" / "config_indonesian_ft.yml"
 
 
 def _load_target_files():
